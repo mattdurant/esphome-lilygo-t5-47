@@ -30,6 +30,9 @@ class LilygoT547Display : public display::DisplayBuffer {
   void set_full_clear_on_boot(bool full_clear_on_boot);
   void set_update_mode(uint8_t mode) { this->update_mode_ = mode; }
   void set_column_refresh(bool v) { this->column_refresh_ = v; }
+  // Next update uses MODE_EPDIY_WHITE_TO_GL16 (valid only when the panel is
+  // currently all white, e.g. right after a white wipe). One-shot.
+  void request_white_to_gl16() { this->next_white_to_gl16_ = true; }
 
   int get_width_internal();
 
@@ -65,6 +68,7 @@ class LilygoT547Display : public display::DisplayBuffer {
   uint8_t update_mode_ = 0;
   // Re-drive every pixel in any column that changed (see cpp).
   bool column_refresh_ = false;
+  bool next_white_to_gl16_ = false;
   void refresh_changed_columns_();
 };
 
