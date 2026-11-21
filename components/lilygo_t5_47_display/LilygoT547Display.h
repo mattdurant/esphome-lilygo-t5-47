@@ -41,6 +41,8 @@ class LilygoT547Display : public display::DisplayBuffer {
   void full_clear();
   void flush_screen_changes();
   void set_all_white();
+  // Fast whole-buffer fill; the base class does it pixel by pixel (~1.2 s).
+  void fill(Color color) override;
   void poweron();
   void poweroff();
   void on_shutdown() override;

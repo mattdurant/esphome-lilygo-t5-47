@@ -1,4 +1,5 @@
 #include "LilygoT547Display.h"
+#include <cstring>
 #include "esphome/core/log.h"
 #include "esp_task_wdt.h"
 
@@ -119,6 +120,21 @@ void LilygoT547Display::flush_screen_changes() {
 
   // Re-enable watchdog
   esp_task_wdt_add(NULL);
+}
+
+void LilygoT547Display::fill(Color color) {
+  // Only the two colours the dashboard uses for wipes take the fast path.
+  // Pixel mapping (see draw_absolute_pixel_internal): COLOR_ON (white) is
+  // stored as 0x0 (ink) and COLOR_OFF (black) as 0xF (paper), two pixels
+  // per byte.
+  size_t bytes = (size_t) epd_width() * (size_t) epd_height() / 2;
+  if (color.red == 255 && color.green == 255 && color.blue == 255) {
+    memset(fb, 0x00, bytes);
+  } else if (color.red == 0 && color.green == 0 && color.blue == 0) {
+    memset(fb, 0xFF, bytes);
+  } else {
+    display::Display::fill(color);
+  }
 }
 
 void LilygoT547Display::set_all_white() { epd_hl_set_all_white(&hl); }
