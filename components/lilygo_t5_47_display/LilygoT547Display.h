@@ -29,6 +29,7 @@ class LilygoT547Display : public display::DisplayBuffer {
   void set_temperature(uint32_t temperature);
   void set_full_clear_on_boot(bool full_clear_on_boot);
   void set_update_mode(uint8_t mode) { this->update_mode_ = mode; }
+  void set_column_refresh(bool v) { this->column_refresh_ = v; }
 
   int get_width_internal();
 
@@ -62,6 +63,9 @@ class LilygoT547Display : public display::DisplayBuffer {
   bool landscape_;
   // 0 = GL16 (original behaviour), 1 = GC16, 2 = DU
   uint8_t update_mode_ = 0;
+  // Re-drive every pixel in any column that changed (see cpp).
+  bool column_refresh_ = false;
+  void refresh_changed_columns_();
 };
 
 }  // namespace lilygo_t5_47_display

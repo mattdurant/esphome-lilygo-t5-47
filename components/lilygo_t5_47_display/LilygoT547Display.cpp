@@ -92,6 +92,36 @@ void LilygoT547Display::full_clear() {
   ESP_LOGI(TAG, "Full hardware clear completed");
 }
 
+// Differential updates only drive pixels that changed and leave the rest of
+// the column on hold. On this panel that leaves visible streaks down every
+// column that contained a change. Marking the previous image of those columns
+// as the opposite colour makes epdiy drive every pixel in them to its target
+// (unchanged pixels just get a pulse towards the colour they already are).
+void LilygoT547Display::refresh_changed_columns_() {
+  const int stride = epd_width() / 2;  // bytes per row, two pixels per byte
+  const int rows = epd_height();
+  uint8_t *front = this->hl.front_fb;
+  uint8_t *back = this->hl.back_fb;
+  static bool col_dirty[960 / 2];
+  for (int b = 0; b < stride; b++) col_dirty[b] = false;
+  for (int y = 0; y < rows; y++) {
+    const uint8_t *f = front + (size_t) y * stride;
+    const uint8_t *k = back + (size_t) y * stride;
+    for (int b = 0; b < stride; b++)
+      if (f[b] != k[b]) col_dirty[b] = true;
+  }
+  int n = 0;
+  for (int b = 0; b < stride; b++) n += col_dirty[b] ? 1 : 0;
+  ESP_LOGD(TAG, "column refresh: %d of %d byte-columns changed", n, stride);
+  if (n == 0) return;
+  for (int y = 0; y < rows; y++) {
+    const uint8_t *f = front + (size_t) y * stride;
+    uint8_t *k = back + (size_t) y * stride;
+    for (int b = 0; b < stride; b++)
+      if (col_dirty[b]) k[b] = f[b] ^ 0xFF;
+  }
+}
+
 void LilygoT547Display::flush_screen_changes() {
   // Disable watchdog for this task during long-running display operation
   esp_task_wdt_delete(NULL);
@@ -109,6 +139,7 @@ void LilygoT547Display::flush_screen_changes() {
     this->just_cleared_ = false;
   }
 
+  if (this->column_refresh_ && mode != MODE_EPDIY_WHITE_TO_GL16) this->refresh_changed_columns_();
   ESP_LOGD(TAG, "epd_hl_update_screen mode=%d temperature=%u", (int) mode, (unsigned) this->temperature_);
   err = epd_hl_update_screen(&hl, mode, this->temperature_);
 
